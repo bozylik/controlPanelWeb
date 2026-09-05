@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>📅 {{ date_str }}</h1>
+
+{% if is_past %}
+<div class="flash error">⚠️ Этот день уже прошёл.</div>
+{% endif %}
+
+<div class="shifts">
+    <div class="shift">
+        <h3>🌅 1 смена (10:00-12:00)</h3>
+        {% for i in range(2) %}
+        {% set info = slots_info[i] %}
+        <div class="slot slot-{{ info.status }}">
+            <div class="slot-main">
+                <span class="slot-num">{{ i+1 }}.</span>
+                <span class="slot-fio">{{ info.fio or 'Свободно' }}</span>
+            </div>
+
+            <div class="slot-actions">
+                {% if info.fio %}
+                    {% if info.status == 'can_checkin' and info.is_mine %}
+                    <form method="POST" action="{{ url_for('checkin', date_str=date_str, slot=i) }}"
+                          style="display:inline">
+                        <button type="submit" class="btn-checkin">✅ Я пришёл</button>
+                    </form>
+                    {% elif info.checkin %}
+                    <span class="checkin-badge">✓ {{ info.checkin['checkin_time'] }}</span>
+                    {% elif info.status == 'missed' %}
+                    <span class="missed-badge">❌ Не явился</span>
+                    {% elif info.status == 'past' %}
+                    <span class="past-badge">⏰ Прошло</span>
+                    {% elif info.status == 'future_today' %}
+                    <span class="future-badge">⏳ Ожидание</span>
+                    {% elif info.status == 'future' %}
+                    <span class="future-badge">📅 Будущее</span>
+                    {% endif %}
+                {% else %}
+                    {% if not is_past and not is_admin %}
+                    <a href="{{ url_for('book_slot', date_str=date_str, slot=i) }}" class="btn-book">Записаться</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="shift">
+        <h3>🌇 2 смена (13:00-16:00)</h3>
+        {% for i in range(2, 4) %}
+        {% set info = slots_info[i] %}
+        <div class="slot slot-{{ info.status }}">
+            <div class="slot-main">
+                <span class="slot-num">{{ i+1 }}.</span>
+                <span class="slot-fio">{{ info.fio or 'Свободно' }}</span>
+            </div>
+
+            <div class="slot-actions">
+                {% if info.fio %}
+                    {% if info.status == 'can_checkin' and info.is_mine %}
+                    <form method="POST" action="{{ url_for('checkin', date_str=date_str, slot=i) }}"
+                          style="display:inline">
+                        <button type="submit" class="btn-checkin">✅ Я пришёл</button>
+                    </form>
+                    {% elif info.checkin %}
+                    <span class="checkin-badge">✓ {{ info.checkin['checkin_time'] }}</span>
+                    {% elif info.status == 'missed' %}
+                    <span class="missed-badge">❌ Не явился</span>
+                    {% elif info.status == 'past' %}
+                    <span class="past-badge">⏰ Прошло</span>
+                    {% elif info.status == 'future_today' %}
+                    <span class="future-badge">⏳ Ожидание</span>
+                    {% elif info.status == 'future' %}
+                    <span class="future-badge">📅 Будущее</span>
+                    {% endif %}
+                {% else %}
+                    {% if not is_past and not is_admin %}
+                    <a href="{{ url_for('book_slot', date_str=date_str, slot=i) }}" class="btn-book">Записаться</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="checkin-help">
+    <h4>ℹ️ Как работает отметка прихода</h4>
+    <ul>
+        <li>🌅 <strong>1 смена:</strong> отметиться можно с 09:45 до 12:30</li>
+        <li>🌇 <strong>2 смена:</strong> отметиться можно с 12:45 до 16:30</li>
+        <li>❌ Если не отметить вовремя → автоматически "не явился"</li>
+    </ul>
+</div>
+
+<a href="{{ url_for('calendar_view') }}" class="btn-back">🔙 Назад</a>
+{% endblock %}

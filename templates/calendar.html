@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>📅 {{ month_name }} {{ year }}</h1>
+
+<div class="today-box">
+    <h3>Дежурные сегодня ({{ today }}):</h3>
+    <p>1. {{ today_data[0].strip() or '—' }} | 2. {{ today_data[1].strip() or '—' }} | 3. {{ today_data[2].strip() or '—' }} | 4. {{ today_data[3].strip() or '—' }}</p>
+</div>
+
+<div class="calendar-nav">
+    <a href="{{ url_for('calendar_view', year=prev_y, month=prev_m) }}">&lt; Пред.</a>
+    <span>{{ month_name }} {{ year }}</span>
+    <a href="{{ url_for('calendar_view', year=next_y, month=next_m) }}">След. &gt;</a>
+</div>
+
+<table class="calendar">
+    <tr><th>Пн</th><th>Вт</th><th>Ср</th><th>Чт</th><th>Пт</th></tr>
+    {% for week in weeks %}
+    <tr>
+        {% for d in week %}
+        <td>
+            {% if d.day == 0 %}
+                &nbsp;
+            {% else %}
+                {% if d.is_past %}
+                    <span class="day-cell past">{{ d.day }}</span>
+                {% else %}
+                    <a href="{{ url_for('day_view', date_str=d.date) }}"
+                       class="day-cell occ-{{ d.occupied }}">
+                        {{ d.day }}
+                        {% if d.occupied == 0 %}✅
+                        {% elif d.occupied == 1 %}1️⃣
+                        {% elif d.occupied == 2 %}2️⃣
+                        {% elif d.occupied == 3 %}3️⃣
+                        {% else %}❌{% endif %}
+                    </a>
+                {% endif %}
+            {% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+
+<style>
+.day-cell.past {
+    display: block;
+    padding: 10px;
+    border-radius: 8px;
+    background: #e9ecef;
+    color: #adb5bd;
+    text-decoration: line-through;
+}
+</style>
+{% endblock %}

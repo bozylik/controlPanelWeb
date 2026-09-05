@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h1>📝 Регистрация</h1>
+
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label>Логин *</label>
+                <input type="text" name="username" placeholder="Минимум 3 символа" required>
+            </div>
+
+            <div class="form-group">
+                <label>ФИО *</label>
+                <input type="text" name="fio" placeholder="Иванов Иван Иванович" required>
+            </div>
+
+            <div class="form-group">
+                <label>Пароль *</label>
+                <input type="password" name="password" placeholder="Минимум 6 символов" required>
+            </div>
+
+            <div class="form-group">
+                <label>Подтверждение пароля *</label>
+                <input type="password" name="password_confirm" placeholder="Повторите пароль" required>
+            </div>
+
+            <div class="form-group">
+                <label>Статус *</label>
+                <select name="role_type" required>
+                    <option value="">-- Выберите статус --</option>
+                    <option value="student">Студент</option>
+                    <option value="ruk">Руководитель практики</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Практика *</label>
+                <select name="practice" required>
+                    <option value="">-- Выберите практику --</option>
+                    {% for p in practices %}
+                    <option value="{{ p }}">{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn-primary">Отправить заявку</button>
+        </form>
+
+        <p class="auth-link">
+            Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

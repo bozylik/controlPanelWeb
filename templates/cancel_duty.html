@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>❌ Отмена дежурства</h1>
+
+{% if future_shifts %}
+<form method="POST">
+    <select name="date" required>
+        {% for d in future_shifts %}
+        <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
+    </select>
+    <input type="text" name="reason" placeholder="Причина отмены" required>
+    <button type="submit">Отменить дежурство</button>
+</form>
+{% else %}
+<p>У вас нет предстоящих дежурств.</p>
+{% endif %}
+
+<a href="{{ url_for('calendar_view') }}" class="btn-back">🔙 Назад</a>
+{% endblock %}

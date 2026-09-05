@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>👥 Управление пользователями</h1>
+
+<!-- ==================== ОЖИДАЮТ ПОДТВЕРЖДЕНИЯ ==================== -->
+{% if pending_users %}
+<div class="section pending-alert">
+    <h2>⏳ Ожидают подтверждения ({{ pending_users|length }})</h2>
+    <div class="pending-list">
+        {% for u in pending_users %}
+        <div class="pending-item">
+            <div>
+                <strong>{{ u['fio'] }}</strong>
+                <span class="role-badge">{{ u['role'] }}</span>
+            </div>
+            <div class="pending-actions">
+                <a href="{{ url_for('approve_user', user_id=u['user_id']) }}" class="btn-unblock">✅ Принять</a>
+                <a href="{{ url_for('reject_user', user_id=u['user_id']) }}" class="btn-block">🚫 Отклонить</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== ПОДТВЕРЖДЁННЫЕ ПОЛЬЗОВАТЕЛИ ==================== -->
+{% if approved_users %}
+<div class="section">
+    <h2>✅ Подтверждённые пользователи ({{ approved_users|length }})</h2>
+    <div class="table-wrapper">
+        <table class="users-table">
+            <tr>
+                <th>Логин</th>
+                <th>ФИО</th>
+                <th>Роль</th>
+                <th>Статус</th>
+                <th>Дата регистрации</th>
+                <th>Действия</th>
+            </tr>
+
+            {% for u in approved_users %}
+            <tr>
+                <td>
+                    {{ u['username'] }}
+                    {% if u['user_id'] == user['id'] %}
+                    <span class="badge-self">Вы</span>
+                    {% endif %}
+                </td>
+
+                <td>{{ u['fio'] }}</td>
+
+                <td>
+                    {% if u['user_id'] != user['id'] %}
+                    <form method="POST" action="{{ url_for('change_user_role', user_id=u['user_id']) }}"
+                          class="role-change-form"
+                          onsubmit="return confirm('Изменить роль для {{ u.fio }}?')">
+                        <select name="new_role" onchange="this.form.submit()">
+                            <option value="{{ u['role'] }}" selected>{{ u['role'] }}</option>
+                            <optgroup label="Студенты">
+                                {% for p in practices %}
+                                <option value="{{ p }}">{{ p }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Руководители">
+                                {% for p in practices %}
+                                <option value="Рук {{ p }}">Рук {{ p }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Администраторы">
+                                <option value="admin">admin</option>
+                            </optgroup>
+                        </select>
+                    </form>
+                    {% else %}
+                    {{ u['role'] }} <span class="muted">(вы)</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <span class="badge-active">✅ Активен</span>
+                </td>
+
+                <td>{{ u['created_at'] }}</td>
+
+                <td class="actions">
+                    {% if u['user_id'] != user['id'] %}
+                    <details class="reset-password">
+                        <summary>🔑 Сбросить пароль</summary>
+                        <form method="POST" action="{{ url_for('admin_reset_password', user_id=u['user_id']) }}"
+                              onsubmit="return confirm('Сбросить пароль для {{ u.fio }}?')">
+                            <input type="password" name="new_password" placeholder="Новый пароль" required minlength="6">
+                            <button type="submit">Сбросить</button>
+                        </form>
+                    </details>
+
+                    <a href="{{ url_for('delete_user', user_id=u['user_id']) }}"
+                       class="btn-danger"
+                       onclick="return confirm('Удалить пользователя {{ u.fio }}?')">
+                        🗑 Удалить
+                    </a>
+                    {% else %}
+                    <span class="muted">— Это вы —</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="section">
+    <h2>✅ Подтверждённые пользователи</h2>
+    <p class="muted">Нет подтверждённых пользователей.</p>
+</div>
+{% endif %}
+{% endblock %}

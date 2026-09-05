@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дежурства</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% if session.get('user_id') %}
+    <nav>
+        <a href="{{ url_for('calendar_view') }}">📅 Календарь</a>
+        <a href="{{ url_for('stats') }}">📊 Статистика</a>
+        <a href="{{ url_for('profile') }}">👤 Профиль</a>
+        {% if user and user.role.lower() in ['admin', 'админ'] %}
+        <a href="{{ url_for('admin_panel') }}">👑 Админка</a>
+        <a href="{{ url_for('admin_users') }}">👥 Пользователи</a>
+        {% endif %}
+        {% if user and user.role.lower().startswith('рук') %}
+        <a href="{{ url_for('ruk_report') }}">👨‍🎓 Балбесы</a>
+        {% endif %}
+        <a href="{{ url_for('logout') }}" class="logout">Выход</a>
+    </nav>
+    {% endif %}
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

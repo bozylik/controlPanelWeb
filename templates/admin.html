@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>👑 Панель админа</h1>
+
+<!-- ==================== СЧЁТЧИКИ ==================== -->
+<div class="stats-cards">
+    <div class="card">
+        <div class="card-number">{{ total_students }}</div>
+        <div class="card-label">👥 Студентов</div>
+    </div>
+    <div class="card">
+        <div class="card-number" style="color:#6f42c1">{{ total_ruks }}</div>
+        <div class="card-label">👨‍🏫 Руководителей</div>
+    </div>
+    <div class="card">
+        <div class="card-number" style="color:#dc3545">{{ total_admins }}</div>
+        <div class="card-label">👑 Админов</div>
+    </div>
+    <div class="card">
+        <div class="card-number" style="color:#ffc107">{{ total_pending }}</div>
+        <div class="card-label">⏳ Ожидают</div>
+    </div>
+    <div class="card">
+        <div class="card-number" style="color:#28a745">{{ total_shifts }}</div>
+        <div class="card-label">📅 Дней в расписании</div>
+    </div>
+    <div class="card">
+        <div class="card-number" style="color:#17a2b8">{{ total_cancels }}</div>
+        <div class="card-label">❌ Отмен</div>
+    </div>
+</div>
+
+<!-- ==================== ОЖИДАЮТ ПОДТВЕРЖДЕНИЯ ==================== -->
+{% if pending_users %}
+<div class="section pending-alert">
+    <h3>⏳ Ожидают подтверждения ({{ pending_users|length }})</h3>
+    <div class="pending-list">
+        {% for u in pending_users %}
+        <div class="pending-item">
+            <div>
+                <strong>{{ u['fio'] }}</strong>
+                <span class="role-badge">{{ u['role'] }}</span>
+            </div>
+            <div>
+                <a href="{{ url_for('approve_user', user_id=u['user_id']) }}" class="btn-unblock">✅ Принять</a>
+                <a href="{{ url_for('reject_user', user_id=u['user_id']) }}" class="btn-block">🚫 Отклонить</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== АКТИВНЫЕ ОСВОБОЖДЕНИЯ ==================== -->
+{% if active_exemptions %}
+<div class="section">
+    <h2>🎉 Активные освобождения на период</h2>
+    <div class="exemptions-list">
+        {% for e in active_exemptions %}
+        <div class="exemption-item">
+            <div class="exemption-info">
+                <strong>{{ e['fio'] }}</strong>
+                <span class="exemption-period">{{ e['start_date'] }} — {{ e['end_date'] }}</span>
+                <span class="exemption-reason">{{ e['reason'] }}</span>
+            </div>
+            <a href="{{ url_for('delete_exemption', exemption_id=e['id']) }}"
+               class="btn-danger"
+               onclick="return confirm('Удалить освобождение?')">🗑</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== СВОДКА ==================== -->
+<div class="section">
+    <div class="section-header">
+        <h2>📈 Сводка</h2>
+        <a href="{{ url_for('export_summary_csv') }}" class="btn-action">📥 Скачать CSV</a>
+    </div>
+
+    <div class="filter-buttons">
+        <a href="{{ url_for('admin_panel') }}"
+           class="filter-btn {{ 'active' if filter_practice == 'all' else '' }}">Все</a>
+        {% for p in practices %}
+        <a href="{{ url_for('admin_panel', practice=p) }}"
+           class="filter-btn {{ 'active' if filter_practice == p else '' }}">{{ p }}</a>
+        {% endfor %}
+    </div>
+
+    <!-- Карточки по практикам -->
+    {% for practice in practices %}
+        {% if filter_practice == 'all' or filter_practice == practice %}
+            {% if summary_cards[practice] %}
+            <div class="practice-block">
+                <h3 class="practice-title">
+                    {% if filter_practice == practice %}
+                    Практика {{ practice }}
+                    {% else %}
+                    {{ practice }}
+                    {% endif %}
+                    <span class="practice-count">{{ summary_cards[practice]|length }} чел.</span>
+                </h3>
+
+                <div class="person-cards">
+                    {% for person in summary_cards[practice] %}
+                    <div class="person-card status-{{ person.status }}">
+                        <div class="person-header">
+                            <div class="person-name">
+                                {{ person.fio }}
+                                {% if person.is_ruk %}
+                                <span class="ruk-badge">👨‍🏫 Рук</span>
+                                {% endif %}
+                            </div>
+                            <div class="person-badges">
+                                {% if person.status == 'lazy' %}
+                                <span class="status-badge missing">❌ Нет записей</span>
+                                {% elif person.status == 'active' %}
+                                <span class="status-badge booked">✅ {{ person.total_shifts }} деж.</span>
+                                {% elif person.status == 'forgiven' %}
+                                <span class="status-badge forgiven">🎉 Освобождён</span>
+                                {% elif person.status == 'exempt' %}
+                                <span class="status-badge exempt">🌟 Вечное</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="person-months">
+                            {% for m in person.months %}
+                            <div class="month-item {% if m.is_current %}current{% endif %} {% if m.is_exempt_month %}exempt-month{% endif %}">
+                                <div class="month-name">{{ m.month_name[:3] }}</div>
+                                <div class="month-content">
+                                    {% if m.is_exempt_month %}
+                                    <span class="month-exempt">—</span>
+                                    {% elif m.forgiven %}
+                                    <span class="month-forgiven" title="{{ m.forgiven }}">🎉 {{ m.forgiven }}</span>
+                                    {% elif m.shifts %}
+                                        {% for shift in m.shifts %}
+                                        <span class="month-shift" title="{{ shift.shift }}, место {{ shift.place }}">
+                                            {{ shift.day }}-е
+                                        </span>
+                                        {% endfor %}
+                                    {% elif m.is_current %}
+                                    <span class="month-current">⚠️ Не записан</span>
+                                    {% else %}
+                                    <span class="month-empty">—</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>📊 Моя статистика</h1>
+
+<div class="stats-header">
+    <div class="user-info">
+        <h2>{{ user.fio }}</h2>
+        <span class="role-badge">{{ user.role }}</span>
+        {% if user.perm_exempt %}
+        <span class="exempt-badge">🌟 Вечное освобождение</span>
+        {% endif %}
+    </div>
+
+    <!-- Новая статистика по явке -->
+    <div class="attendance-stats">
+        <div class="attendance-card">
+            <div class="attendance-number" style="color:#28a745">{{ present_count }}</div>
+            <div class="attendance-label">✅ Пришёл</div>
+        </div>
+        <div class="attendance-card">
+            <div class="attendance-number" style="color:#dc3545">{{ missed_count }}</div>
+            <div class="attendance-label">❌ Не явился</div>
+        </div>
+        <div class="attendance-card">
+            <div class="attendance-number" style="color:#4a76a8">{{ attendance_rate }}%</div>
+            <div class="attendance-label">📊 Явка</div>
+        </div>
+    </div>
+</div>
+
+<!-- Ожидают подтверждения -->
+{% if pending_requests %}
+<div class="section pending-alert">
+    <h3>⏳ Ожидают подтверждения ({{ pending_requests|length }})</h3>
+    <div class="pending-list">
+        {% for r in pending_requests %}
+        <div class="pending-item">
+            <div>
+                <strong>{{ r['date_str'] }}</strong>
+                <span class="muted">{{ r['reason'] }}</span>
+            </div>
+            <span class="status-badge pending">⏳ Ожидает</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if shifts %}
+<div class="section">
+    <h3>📅 Мои дежурства ({{ shifts|length }})</h3>
+    <div class="shifts-list">
+        {% for shift in shifts %}
+<div class="shift-card {% if shift.is_past %}past{% endif %} shift-{{ shift.checkin_status }}">
+    <div>
+        <div class="shift-date">{{ shift.date_str }}</div>
+        <div class="shift-time">{{ shift.shift }}</div>
+        <div class="shift-place">🪑 Место {{ shift.place }}</div>
+    </div>
+    <div class="shift-right">
+        {% if shift.checkin_status == 'present' %}
+        <span class="shift-status present">✓ Пришёл в {{ shift.checkin_time }}</span>
+        {% elif shift.checkin_status == 'missed' %}
+        <span class="shift-status missed">❌ Не явился</span>
+        {% else %}
+        <span class="shift-status upcoming">⏳ Ожидается</span>
+        {% endif %}
+
+        {% if not shift.is_past %}
+        <details class="cancel-details">
+            <summary class="btn-cancel">❌ Отменить</summary>
+            <form method="POST" action="{{ url_for('unbook_from_stats', date_str=shift.date_str) }}"
+                  class="cancel-form"
+                  onsubmit="return confirm('Отменить дежурство {{ shift.date_str }}?')">
+                <input type="text" name="reason" placeholder="Причина отмены" required>
+                <button type="submit">Подтвердить</button>
+            </form>
+        </details>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>📭 У вас пока нет дежурств</p>
+    <a href="{{ url_for('calendar_view') }}" class="btn-primary"
+       style="display:inline-block; width:auto; padding:14px 30px;">
+        Записаться на дежурство
+    </a>
+</div>
+{% endif %}
+
+{% if missed %}
+<div class="section">
+    <h3>⚠️ Пропущенные месяцы ({{ missed|length }})</h3>
+    <div class="tag-list">
+        {% for m in missed %}
+        <span class="tag tag-missed">{{ m }}</span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if forgiven %}
+<div class="section">
+    <h3>🎉 Освобождения ({{ forgiven|length }})</h3>
+    <div class="tag-list">
+        {% for (y,m), reason in forgiven.items() %}
+        <span class="tag tag-forgiven" title="{{ reason }}">
+            {{ MONTH_NAMES[m-1] }} {{ y }}: {{ reason }}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if cancelled %}
+<div class="section">
+    <h3>❌ История отмен ({{ cancelled|length }})</h3>
+    <ul class="cancel-history">
+        {% for c in cancelled %}
+        <li>{{ c.date }} — {{ c.reason }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+{% if processed_requests %}
+<div class="section">
+    <h3>📋 История согласований отмен ({{ processed_requests|length }})</h3>
+    <ul class="cancel-history">
+        {% for r in processed_requests %}
+        <li>
+            <strong>{{ r['date_str'] }}</strong>
+            {% if r['status'] == 'approved' %}
+                <span style="color:#28a745">✅ Одобрено</span>
+            {% else %}
+                <span style="color:#dc3545">❌ Отклонено</span>
+            {% endif %}
+            — {{ r['reason'] }}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

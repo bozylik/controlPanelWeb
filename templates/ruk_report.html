@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>👨‍🎓 {{ target_p }} — {{ month_name }} {{ year }}</h1>
+
+<!-- Навигация по месяцам -->
+<div class="calendar-nav">
+    <a href="{{ url_for('ruk_report', month=prev_m, year=prev_y) }}">&lt; Пред.</a>
+    <span>{{ month_name }} {{ year }}</span>
+    <a href="{{ url_for('ruk_report', month=next_m, year=next_y) }}">След. &gt;</a>
+</div>
+
+<!-- Статистика по практике -->
+<div class="stats-cards">
+    <div class="card">
+        <div class="card-number">{{ total_students }}</div>
+        <div class="card-label">Всего студентов</div>
+    </div>
+    <div class="card">
+        <div class="card-number" style="color:#28a745">{{ active_students }}</div>
+        <div class="card-label">✅ Записаны</div>
+    </div>
+    <div class="card">
+        <div class="card-number" style="color:#dc3545">{{ lazy_students }}</div>
+        <div class="card-label">❌ Халтурят</div>
+    </div>
+    <div class="card">
+        <div class="card-number" style="color:#6c757d">{{ exempt_students }}</div>
+        <div class="card-label">🎉 Освобождены</div>
+    </div>
+</div>
+
+<!-- Статистика явки по всей практике -->
+<div class="section attendance-section">
+    <h2>📊 Явка практики {{ target_p }} за {{ month_name }}</h2>
+    <div class="attendance-stats">
+        <div class="attendance-card">
+            <div class="attendance-number" style="color:#28a745">{{ practice_present }}</div>
+            <div class="attendance-label">✅ Пришли</div>
+        </div>
+        <div class="attendance-card">
+            <div class="attendance-number" style="color:#dc3545">{{ practice_missed }}</div>
+            <div class="attendance-label">❌ Не явились</div>
+        </div>
+        <div class="attendance-card">
+            <div class="attendance-number" style="color:#4a76a8">{{ practice_attendance_rate }}%</div>
+            <div class="attendance-label">📊 Общая явка</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== ЗАПРОСЫ НА ОТМЕНУ ==================== -->
+{% if pending_cancel_requests %}
+<div class="section pending-alert">
+    <h3>⏳ Запросы на отмену ({{ pending_cancel_requests|length }})</h3>
+    <div class="pending-list">
+        {% for r in pending_cancel_requests %}
+        <div class="pending-item">
+            <div class="pending-info">
+                <div><strong>{{ r['fio'] }}</strong></div>
+                <div class="pending-date">📅 {{ r['date_str'] }}</div>
+                <div class="pending-reason">💬 {{ r['reason'] }}</div>
+                <div class="pending-time muted">{{ r['created_at'] }}</div>
+            </div>
+            <div class="pending-actions">
+                <a href="{{ url_for('approve_cancel', request_id=r['id']) }}" class="btn-unblock">✅ Разрешить</a>
+                <a href="{{ url_for('reject_cancel', request_id=r['id']) }}" class="btn-block">❌ Отказать</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== ПРОЩЕНИЕ И ОСВОБОЖДЕНИЕ ==================== -->
+{% if students %}
+<div class="section">
+    <h2>🙏 Простить дежурство</h2>
+    <p class="muted" style="margin-bottom: 15px;">
+        💡 Для прощения за один день укажите одинаковые даты.
+        Прощение убирает отметку "не явился" из статистики.
+    </p>
+    <form method="POST" action="{{ url_for('ruk_forgive_period') }}" class="forgive-form">
+        <div class="form-group">
+            <label>Студент *</label>
+            <select name="target_id" required>
+                <option value="">-- Выберите --</option>
+                {% for s in students %}
+                <option value="{{ s['user_id'] }}">{{ s['fio'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>С даты *</label>
+            <input type="date" name="start_date" required>
+        </div>
+        <div class="form-group">
+            <label>По дату *</label>
+            <input type="date" name="end_date" required>
+        </div>
+        <div class="form-group">
+            <label>Причина</label>
+            <input type="text" name="reason" placeholder="Причина прощения">
+        </div>
+        <button type="submit">Простить</button>
+    </form>
+</div>
+
+<div class="section">
+    <h2>📅 Выдать освобождение на период</h2>
+    <form method="POST" action="{{ url_for('ruk_add_exemption') }}" class="forgive-form">
+        <div class="form-group">
+            <label>Студент *</label>
+            <select name="target_id" required>
+                <option value="">-- Выберите --</option>
+                {% for s in students %}
+                <option value="{{ s['user_id'] }}">{{ s['fio'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>С даты *</label>
+            <input type="date" name="start_date" required>
+        </div>
+        <div class="form-group">
+            <label>По дату *</label>
+            <input type="date" name="end_date" required>
+        </div>
+        <div class="form-group">
+            <label>Причина</label>
+            <input type="text" name="reason" placeholder="Освобождение на период">
+        </div>
+        <button type="submit">Выдать</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- ==================== АКТИВНЫЕ ОСВОБОЖДЕНИЯ ==================== -->
+{% if active_exemptions %}
+<div class="section">
+    <h2>📅 Активные освобождения моих студентов</h2>
+    <div class="exemptions-list">
+        {% for e in active_exemptions %}
+        <div class="exemption-item">
+            <div class="exemption-info">
+                <strong>{{ e['fio'] }}</strong>
+                <span class="exemption-period">{{ e['start_date'] }} — {{ e['end_date'] }}</span>
+                <span class="exemption-reason">{{ e['reason'] }}</span>
+            </div>
+            <a href="{{ url_for('ruk_delete_exemption', exemption_id=e['id']) }}"
+               class="btn-danger"
+               onclick="return confirm('Удалить освобождение?')">🗑</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== АКТИВНЫЕ ПРОЩЕНИЯ ==================== -->
+{% if active_forgiveness %}
+<div class="section">
+    <h2>🎉 Активные прощения за этот месяц</h2>
+    <div class="exemptions-list">
+        {% for f in active_forgiveness %}
+        <div class="exemption-item forgiveness-item">
+            <div class="exemption-info">
+                <strong>{{ f['fio'] }}</strong>
+                <span class="exemption-period">{{ f['start_date'] }} — {{ f['end_date'] }}</span>
+                <span class="exemption-reason">{{ f['reason'] }}</span>
+            </div>
+            <a href="{{ url_for('ruk_delete_forgiveness', forgiveness_id=f['id']) }}"
+               class="btn-danger"
+               onclick="return confirm('Удалить прощение?')">🗑</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== СПИСОК СТУДЕНТОВ ==================== -->
+{% if students %}
+<div class="students-list">
+    {% for s in students %}
+    <div class="student-card status-{{ s.status }}">
+
+        <!-- Шапка карточки -->
+        <div class="student-header">
+            <h3>{{ s.fio }}</h3>
+            <div class="student-actions">
+                {% if s.status == 'missing' %}
+                <span class="status-badge missing">❌ Халтурит</span>
+                {% elif s.status == 'booked' %}
+                <span class="status-badge booked">✅ {{ s.shifts|length }} дежурств</span>
+                {% elif s.status == 'forgiven' %}
+                <span class="status-badge forgiven">🎉 Освобождён</span>
+                {% elif s.status == 'exempt' %}
+                <span class="status-badge exempt">🌟 Вечное</span>
+                {% endif %}
+
+                <a href="{{ url_for('ruk_toggle_perm_exempt', user_id=s.user_id) }}"
+                   class="btn-exempt-toggle"
+                   onclick="return confirm('{{ 'Снять вечное освобождение' if s.perm_exempt else 'Выдать вечное освобождение' }} для {{ s.fio }}?')">
+                    {{ '🌟 Снять вечное' if s.perm_exempt else '🌟 Вечное' }}
+                </a>
+
+                <a href="{{ url_for('ruk_delete_student', user_id=s.user_id) }}"
+                   class="btn-danger btn-delete-student"
+                   onclick="return confirm('Удалить студента {{ s.fio }}?\n\nАккаунт будет удалён полностью!')">
+                    🗑 Удалить
+                </a>
+            </div>
+        </div>
+
+        <!-- Индивидуальная статистика явки -->
+        {% if s.shifts and (s.present_count + s.missed_count) > 0 %}
+        <div class="student-attendance">
+            <div class="attendance-mini">
+                <span class="att-present">✅ {{ s.present_count }}</span>
+                <span class="att-missed">❌ {{ s.missed_count }}</span>
+                <span class="att-rate">📊 {{ s.attendance_rate }}%</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Дежурства -->
+        {% if s.shifts %}
+        <div class="student-section">
+            <h4>📅 Дежурства в {{ month_name }}:</h4>
+            <div class="shifts-grid">
+                {% for shift in s.shifts %}
+                <div class="shift-item shift-{{ shift.checkin_status }}">
+                    <div class="shift-item-header">
+                        <div class="shift-item-info">
+                            <div class="shift-item-date">{{ shift.date }}</div>
+                            <div class="shift-item-time">{{ shift.shift }}</div>
+                            <div class="shift-item-place">🪑 Место {{ shift.place }}</div>
+                            {% if shift.checkin_status == 'present' %}
+                            <div class="shift-item-checkin">✅ Пришёл в {{ shift.checkin_time }}</div>
+                            {% elif shift.checkin_status == 'missed' %}
+                            <div class="shift-item-checkin missed">❌ Не явился</div>
+                            {% elif shift.checkin_status == 'forgiven' %}
+                            <div class="shift-item-checkin forgiven">🎉 Прощено</div>
+                            {% elif shift.checkin_status == 'upcoming' %}
+                            <div class="shift-item-checkin upcoming">⏳ Ожидается</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Кнопка удаления ТОЛЬКО для будущих смен -->
+                        {% if shift.checkin_status == 'upcoming' %}
+                        <details class="shift-delete">
+                            <summary title="Удалить запись">❌</summary>
+                            <form method="POST"
+                                  action="{{ url_for('ruk_remove_shift', date_str=shift.date, slot=shift.place - 1) }}"
+                                  onsubmit="return confirm('Удалить запись {{ s.fio }} на {{ shift.date }}?')">
+                                <input type="text" name="reason" placeholder="Причина" required>
+                                <button type="submit">Удалить</button>
+                            </form>
+                        </details>
+                        {% else %}
+                        <span class="shift-locked"
+                              title="Завершённая смена — это факт. Убрать 'не явился' можно только прощением.">🔒</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% elif s.status == 'missing' %}
+        <div class="student-section warning">
+            <h4>⚠️ Нет записей в этом месяце</h4>
+        </div>
+        {% endif %}
+
+        <!-- Освобождение в текущем месяце -->
+        {% if s.forgiven_this_month %}
+        <div class="student-section forgiven-section">
+            <h4>🎉 Освобождён в {{ month_name }}:</h4>
+            <p>{{ s.forgiven_this_month }}</p>
+        </div>
+        {% endif %}
+
+        <!-- История отмен -->
+        {% if s.cancels %}
+        <div class="student-section cancels-section">
+            <h4>📜 История отмен/освобождений ({{ s.cancels|length }}):</h4>
+            <details>
+                <summary>Показать всю историю</summary>
+                <div class="cancels-list">
+                    {% for c in s.cancels %}
+                    <div class="cancel-item">
+                        <div class="cancel-info">
+                            <span class="cancel-date">{{ c.cancel_date }}</span>
+                            <span class="cancel-arrow">→</span>
+                            <span class="cancel-target">{{ c.target }}</span>
+                        </div>
+                        <div class="cancel-reason">💬 {{ c.reason }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+        {% endif %}
+
+        <!-- Вечное освобождение -->
+        {% if s.perm_exempt %}
+        <div class="student-section exempt-section">
+            <h4>🌟 Вечное освобождение от дежурств</h4>
+        </div>
+        {% endif %}
+
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>📭 В практике {{ target_p }} пока нет студентов</p>
+</div>
+{% endif %}
+{% endblock %}

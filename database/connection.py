@@ -13,10 +13,10 @@ USE_TURSO = bool(config.TURSO_DATABASE_URL and config.TURSO_AUTH_TOKEN)
 
 if USE_TURSO:
     try:
-        import libsql.experimental as libsql
+        import libsql_client
     except ImportError:
         raise RuntimeError(
-            "Для работы с Turso установи пакет: pip install libsql-experimental"
+            "Для работы с Turso установи пакет: pip install libsql-client"
         )
 
 
@@ -27,28 +27,19 @@ class ConnectionMixin:
     def _get_conn(self):
         if not hasattr(self.local, 'conn') or self.local.conn is None:
             if USE_TURSO:
-                self.local.conn = libsql.connect(
-                    config.TURSO_DATABASE_URL,
-                    auth_token=config.TURSO_AUTH_TOKEN,
+                # libsql_client создает синхронное HTTPS-подключение
+                self.local.conn = libsql_client.create_client_sync(
+                    url=config.TURSO_DATABASE_URL,
+                    auth_token=config.TURSO_AUTH_TOKEN
                 )
-                # LibSQL возвращает Row-подобные объекты,
-                # row_factory задаётся не так, как в sqlite3,
-                # но в libsql-experimental по умолчанию dict-подобный доступ работает.
-                # Чтобы dict(row) работал как раньше — используем row_factory.
-                try:
-                    self.local.conn.row_factory = libsql.Row
-                except AttributeError:
-                    pass
             else:
                 self.local.conn = sqlite3.connect(config.DB_PATH)
                 self.local.conn.row_factory = sqlite3.Row
         return self.local.conn
 
     def init(self):
-        """Создаёт таблицы. Executescript в LibSQL работает не везде —
-        создаём таблицы по одной."""
+        """Создаёт таблицы."""
         conn = self._get_conn()
-        cursor = conn.cursor()
 
         tables = [
             """CREATE TABLE IF NOT EXISTS users (
@@ -122,15 +113,19 @@ class ConnectionMixin:
 
         for sql in tables:
             try:
-                cursor.execute(sql)
+                if USE_TURSO:
+                    conn.execute(sql)
+                else:
+                    cursor = conn.cursor()
+                    cursor.execute(sql)
             except Exception as e:
                 print(f"⚠️ Таблица: {e}")
 
-        # Миграция: добавить approval_status, если его нет
-        try:
-            cursor.execute("ALTER TABLE users ADD COLUMN approval_status TEXT DEFAULT 'pending'")
-        except Exception:
-            pass  # уже есть
+        if not USE_TURSO:
+            try:
+                conn.cursor().execute("ALTER TABLE users ADD COLUMN approval_status TEXT DEFAULT 'pending'")
+            except Exception:
+                pass
+            conn.commit()
 
-        conn.commit()
         print(f"✅ БД готова (движок: {'Turso' if USE_TURSO else 'SQLite'})")

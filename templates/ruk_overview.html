@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>👨🎓 Отчёты по практикам — {{ month_name }} {{ year }}</h1>
+
+<!-- Навигация по месяцам -->
+<div class="calendar-nav">
+    <a href="{{ url_for('ruk.ruk_report', month=prev_m, year=prev_y) }}">&lt; Пред.</a>
+    <span>{{ month_name }} {{ year }}</span>
+    <a href="{{ url_for('ruk.ruk_report', month=next_m, year=next_y) }}">След. &gt;</a>
+</div>
+
+<!-- Переключатель практик -->
+<div class="filter-buttons">
+    <a href="{{ url_for('ruk.ruk_report', month=month, year=year) }}" class="filter-btn active">Все практики</a>
+    {% for p in practices %}
+    <a href="{{ url_for('ruk.ruk_report', month=month, year=year, practice=p) }}" class="filter-btn">{{ p }}</a>
+    {% endfor %}
+</div>
+
+{% for row in overview %}
+<div class="section">
+    <div class="section-header">
+        <h2>Практика {{ row.practice }}</h2>
+        <a href="{{ url_for('ruk.ruk_report', month=month, year=year, practice=row.practice) }}"
+           class="btn-action">Подробнее →</a>
+    </div>
+    <div class="stats-cards">
+        <div class="card">
+            <div class="card-number">{{ row.total_students }}</div>
+            <div class="card-label">Всего студентов</div>
+        </div>
+        <div class="card">
+            <div class="card-number" style="color:#28a745">{{ row.active_students }}</div>
+            <div class="card-label">✅ Записаны</div>
+        </div>
+        <div class="card">
+            <div class="card-number" style="color:#dc3545">{{ row.lazy_students }}</div>
+            <div class="card-label">❌ Халтурят</div>
+        </div>
+        <div class="card">
+            <div class="card-number" style="color:#6c757d">{{ row.exempt_students }}</div>
+            <div class="card-label">🎉 Освобождены</div>
+        </div>
+        <div class="card">
+            <div class="card-number" style="color:#4a76a8">{{ row.practice_attendance_rate }}%</div>
+            <div class="card-label">📊 Явка</div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

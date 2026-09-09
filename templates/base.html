@@ -9,17 +9,20 @@
 <body>
     {% if session.get('user_id') %}
     <nav>
-        <a href="{{ url_for('calendar_view') }}">📅 Календарь</a>
-        <a href="{{ url_for('stats') }}">📊 Статистика</a>
-        <a href="{{ url_for('profile') }}">👤 Профиль</a>
+        <a href="{{ url_for('calendar.calendar_view') }}">📅 Календарь</a>
+        {% if user and not (user.role.lower() in ['admin', 'админ'] or user.role.lower().startswith('рук')) %}
+        <a href="{{ url_for('stats.stats') }}">📊 Статистика</a>
+        {% endif %}
+        <a href="{{ url_for('profile.profile') }}">👤 Профиль</a>
         {% if user and user.role.lower() in ['admin', 'админ'] %}
-        <a href="{{ url_for('admin_panel') }}">👑 Админка</a>
-        <a href="{{ url_for('admin_users') }}">👥 Пользователи</a>
+        <a href="{{ url_for('admin.admin_panel') }}">👑 Админка</a>
+        <a href="{{ url_for('admin.admin_users') }}">👥 Пользователи</a>
+        <a href="{{ url_for('ruk.ruk_report') }}">👨‍🎓 Отчёты практик</a>
         {% endif %}
         {% if user and user.role.lower().startswith('рук') %}
-        <a href="{{ url_for('ruk_report') }}">👨‍🎓 Балбесы</a>
+        <a href="{{ url_for('ruk.ruk_report') }}">👨‍ Мои студенты</a>
         {% endif %}
-        <a href="{{ url_for('logout') }}" class="logout">Выход</a>
+        <a href="{{ url_for('auth.logout') }}" class="logout">Выход</a>
     </nav>
     {% endif %}
 

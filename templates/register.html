@@ -4,7 +4,7 @@
     <div class="auth-box">
         <h1>📝 Регистрация</h1>
 
-        <form method="POST" action="{{ url_for('register') }}">
+        <form method="POST" action="{{ url_for('auth.register') }}">
             <div class="form-group">
                 <label>Логин *</label>
                 <input type="text" name="username" placeholder="Минимум 3 символа" required>
@@ -48,7 +48,7 @@
         </form>
 
         <p class="auth-link">
-            Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a>
+            Уже есть аккаунт? <a href="{{ url_for('auth.login') }}">Войти</a>
         </p>
     </div>
 </div>

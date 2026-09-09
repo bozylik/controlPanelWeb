@@ -5,7 +5,7 @@
 <div class="profile-sections">
     <div class="profile-section">
         <h3>📋 Информация</h3>
-        <form method="POST" action="{{ url_for('update_profile') }}">
+        <form method="POST" action="{{ url_for('profile.update_profile') }}">
             <div class="form-group">
                 <label>Логин</label>
                 <input type="text" value="{{ user.username }}" disabled>
@@ -28,7 +28,7 @@
 
     <div class="profile-section">
         <h3>🔒 Смена пароля</h3>
-        <form method="POST" action="{{ url_for('change_password') }}">
+        <form method="POST" action="{{ url_for('profile.change_password') }}">
             <div class="form-group">
                 <label>Текущий пароль</label>
                 <input type="password" name="old_password" required>

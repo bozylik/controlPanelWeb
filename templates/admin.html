@@ -31,6 +31,7 @@
 </div>
 
 <!-- ==================== ОЖИДАЮТ ПОДТВЕРЖДЕНИЯ ==================== -->
+<!-- ==================== ОЖИДАЮТ ПОДТВЕРЖДЕНИЯ ==================== -->
 {% if pending_users %}
 <div class="section pending-alert">
     <h3>⏳ Ожидают подтверждения ({{ pending_users|length }})</h3>
@@ -40,10 +41,11 @@
             <div>
                 <strong>{{ u['fio'] }}</strong>
                 <span class="role-badge">{{ u['role'] }}</span>
+                <div class="pending-email">📧 {{ u['username'] }}</div>
             </div>
             <div>
-                <a href="{{ url_for('approve_user', user_id=u['user_id']) }}" class="btn-unblock">✅ Принять</a>
-                <a href="{{ url_for('reject_user', user_id=u['user_id']) }}" class="btn-block">🚫 Отклонить</a>
+                <a href="{{ url_for('admin.approve_user', user_id=u['user_id']) }}" class="btn-unblock">✅ Принять</a>
+                <a href="{{ url_for('admin.reject_user', user_id=u['user_id']) }}" class="btn-block">🚫 Отклонить</a>
             </div>
         </div>
         {% endfor %}
@@ -63,7 +65,7 @@
                 <span class="exemption-period">{{ e['start_date'] }} — {{ e['end_date'] }}</span>
                 <span class="exemption-reason">{{ e['reason'] }}</span>
             </div>
-            <a href="{{ url_for('delete_exemption', exemption_id=e['id']) }}"
+            <a href="{{ url_for('admin.delete_exemption', exemption_id=e['id']) }}"
                class="btn-danger"
                onclick="return confirm('Удалить освобождение?')">🗑</a>
         </div>
@@ -76,14 +78,14 @@
 <div class="section">
     <div class="section-header">
         <h2>📈 Сводка</h2>
-        <a href="{{ url_for('export_summary_csv') }}" class="btn-action">📥 Скачать CSV</a>
+        <a href="{{ url_for('admin.export_summary_csv') }}" class="btn-action">📥 Скачать CSV</a>
     </div>
 
     <div class="filter-buttons">
-        <a href="{{ url_for('admin_panel') }}"
+        <a href="{{ url_for('admin.admin_panel') }}"
            class="filter-btn {{ 'active' if filter_practice == 'all' else '' }}">Все</a>
         {% for p in practices %}
-        <a href="{{ url_for('admin_panel', practice=p) }}"
+        <a href="{{ url_for('admin.admin_panel', practice=p) }}"
            class="filter-btn {{ 'active' if filter_practice == p else '' }}">{{ p }}</a>
         {% endfor %}
     </div>
@@ -136,7 +138,8 @@
                                     <span class="month-forgiven" title="{{ m.forgiven }}">🎉 {{ m.forgiven }}</span>
                                     {% elif m.shifts %}
                                         {% for shift in m.shifts %}
-                                        <span class="month-shift" title="{{ shift.shift }}, место {{ shift.place }}">
+                                        <span class="month-shift shift-badge-{{ shift.checkin_status }}"
+                                              title="{{ shift.shift }}, место {{ shift.place }}">
                                             {{ shift.day }}-е
                                         </span>
                                         {% endfor %}

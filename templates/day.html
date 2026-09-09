@@ -20,7 +20,7 @@
             <div class="slot-actions">
                 {% if info.fio %}
                     {% if info.status == 'can_checkin' and info.is_mine %}
-                    <form method="POST" action="{{ url_for('checkin', date_str=date_str, slot=i) }}"
+                    <form method="POST" action="{{ url_for('checkin.checkin', date_str=date_str, slot=i) }}"
                           style="display:inline">
                         <button type="submit" class="btn-checkin">✅ Я пришёл</button>
                     </form>
@@ -36,8 +36,8 @@
                     <span class="future-badge">📅 Будущее</span>
                     {% endif %}
                 {% else %}
-                    {% if not is_past and not is_admin %}
-                    <a href="{{ url_for('book_slot', date_str=date_str, slot=i) }}" class="btn-book">Записаться</a>
+                    {% if not is_past and not is_admin and not is_ruk %}
+                    <a href="{{ url_for('calendar.book_slot', date_str=date_str, slot=i) }}" class="btn-book">Записаться</a>
                     {% endif %}
                 {% endif %}
             </div>
@@ -58,7 +58,7 @@
             <div class="slot-actions">
                 {% if info.fio %}
                     {% if info.status == 'can_checkin' and info.is_mine %}
-                    <form method="POST" action="{{ url_for('checkin', date_str=date_str, slot=i) }}"
+                    <form method="POST" action="{{ url_for('checkin.checkin', date_str=date_str, slot=i) }}"
                           style="display:inline">
                         <button type="submit" class="btn-checkin">✅ Я пришёл</button>
                     </form>
@@ -74,8 +74,8 @@
                     <span class="future-badge">📅 Будущее</span>
                     {% endif %}
                 {% else %}
-                    {% if not is_past and not is_admin %}
-                    <a href="{{ url_for('book_slot', date_str=date_str, slot=i) }}" class="btn-book">Записаться</a>
+                    {% if not is_past and not is_admin and not is_ruk %}
+                    <a href="{{ url_for('calendar.book_slot', date_str=date_str, slot=i) }}" class="btn-book">Записаться</a>
                     {% endif %}
                 {% endif %}
             </div>
@@ -87,11 +87,11 @@
 <div class="checkin-help">
     <h4>ℹ️ Как работает отметка прихода</h4>
     <ul>
-        <li>🌅 <strong>1 смена:</strong> отметиться можно с 09:45 до 12:30</li>
-        <li>🌇 <strong>2 смена:</strong> отметиться можно с 12:45 до 16:30</li>
+        <li>🌅 <strong>1 смена:</strong> отметиться можно с 10:00 до 12:00</li>
+        <li>🌇 <strong>2 смена:</strong> отметиться можно с 13:00 до 16:00</li>
         <li>❌ Если не отметить вовремя → автоматически "не явился"</li>
     </ul>
 </div>
 
-<a href="{{ url_for('calendar_view') }}" class="btn-back">🔙 Назад</a>
+<a href="{{ url_for('calendar.calendar_view') }}" class="btn-back">🔙 Назад</a>
 {% endblock %}

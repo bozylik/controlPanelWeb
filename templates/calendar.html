@@ -8,9 +8,9 @@
 </div>
 
 <div class="calendar-nav">
-    <a href="{{ url_for('calendar_view', year=prev_y, month=prev_m) }}">&lt; Пред.</a>
+    <a href="{{ url_for('calendar.calendar_view', year=prev_y, month=prev_m) }}">&lt; Пред.</a>
     <span>{{ month_name }} {{ year }}</span>
-    <a href="{{ url_for('calendar_view', year=next_y, month=next_m) }}">След. &gt;</a>
+    <a href="{{ url_for('calendar.calendar_view', year=next_y, month=next_m) }}">След. &gt;</a>
 </div>
 
 <table class="calendar">
@@ -25,7 +25,7 @@
                 {% if d.is_past %}
                     <span class="day-cell past">{{ d.day }}</span>
                 {% else %}
-                    <a href="{{ url_for('day_view', date_str=d.date) }}"
+                    <a href="{{ url_for('calendar.day_view', date_str=d.date) }}"
                        class="day-cell occ-{{ d.occupied }}">
                         {{ d.day }}
                         {% if d.occupied == 0 %}✅

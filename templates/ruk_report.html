@@ -1,13 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>👨‍🎓 {{ target_p }} — {{ month_name }} {{ year }}</h1>
+<h1>👨‍🎓 Отчёт по практике {{ target_p }} — {{ month_name }} {{ year }}</h1>
 
-<!-- Навигация по месяцам -->
+<!-- Навигация по месяцам (сохраняет выбранную практику у админа) -->
 <div class="calendar-nav">
-    <a href="{{ url_for('ruk_report', month=prev_m, year=prev_y) }}">&lt; Пред.</a>
+    <a href="{{ url_for('ruk.ruk_report', month=prev_m, year=prev_y, practice=current_practice) }}">&lt; Пред.</a>
     <span>{{ month_name }} {{ year }}</span>
-    <a href="{{ url_for('ruk_report', month=next_m, year=next_y) }}">След. &gt;</a>
+    <a href="{{ url_for('ruk.ruk_report', month=next_m, year=next_y, practice=current_practice) }}">След. &gt;</a>
 </div>
+
+<!-- Переключатель практик (только для админа) -->
+{% if is_admin_view %}
+<div class="filter-buttons">
+    <a href="{{ url_for('ruk.ruk_report', month=month, year=year) }}" class="filter-btn">Все практики</a>
+    {% for p in practices %}
+    <a href="{{ url_for('ruk.ruk_report', month=month, year=year, practice=p) }}"
+       class="filter-btn {{ 'active' if p == target_p else '' }}">{{ p }}</a>
+    {% endfor %}
+</div>
+{% endif %}
 
 <!-- Статистика по практике -->
 <div class="stats-cards">
@@ -62,8 +73,8 @@
                 <div class="pending-time muted">{{ r['created_at'] }}</div>
             </div>
             <div class="pending-actions">
-                <a href="{{ url_for('approve_cancel', request_id=r['id']) }}" class="btn-unblock">✅ Разрешить</a>
-                <a href="{{ url_for('reject_cancel', request_id=r['id']) }}" class="btn-block">❌ Отказать</a>
+                <a href="{{ url_for('ruk.approve_cancel', request_id=r['id']) }}" class="btn-unblock">✅ Разрешить</a>
+                <a href="{{ url_for('ruk.reject_cancel', request_id=r['id']) }}" class="btn-block">❌ Отказать</a>
             </div>
         </div>
         {% endfor %}
@@ -79,7 +90,7 @@
         💡 Для прощения за один день укажите одинаковые даты.
         Прощение убирает отметку "не явился" из статистики.
     </p>
-    <form method="POST" action="{{ url_for('ruk_forgive_period') }}" class="forgive-form">
+    <form method="POST" action="{{ url_for('ruk.ruk_forgive_period') }}" class="forgive-form">
         <div class="form-group">
             <label>Студент *</label>
             <select name="target_id" required>
@@ -107,7 +118,7 @@
 
 <div class="section">
     <h2>📅 Выдать освобождение на период</h2>
-    <form method="POST" action="{{ url_for('ruk_add_exemption') }}" class="forgive-form">
+    <form method="POST" action="{{ url_for('ruk.ruk_add_exemption') }}" class="forgive-form">
         <div class="form-group">
             <label>Студент *</label>
             <select name="target_id" required>
@@ -137,7 +148,7 @@
 <!-- ==================== АКТИВНЫЕ ОСВОБОЖДЕНИЯ ==================== -->
 {% if active_exemptions %}
 <div class="section">
-    <h2>📅 Активные освобождения моих студентов</h2>
+    <h2>📅 Активные освобождения студентов практики {{ target_p }}</h2>
     <div class="exemptions-list">
         {% for e in active_exemptions %}
         <div class="exemption-item">
@@ -146,7 +157,7 @@
                 <span class="exemption-period">{{ e['start_date'] }} — {{ e['end_date'] }}</span>
                 <span class="exemption-reason">{{ e['reason'] }}</span>
             </div>
-            <a href="{{ url_for('ruk_delete_exemption', exemption_id=e['id']) }}"
+            <a href="{{ url_for('ruk.ruk_delete_exemption', exemption_id=e['id']) }}"
                class="btn-danger"
                onclick="return confirm('Удалить освобождение?')">🗑</a>
         </div>
@@ -158,7 +169,7 @@
 <!-- ==================== АКТИВНЫЕ ПРОЩЕНИЯ ==================== -->
 {% if active_forgiveness %}
 <div class="section">
-    <h2>🎉 Активные прощения за этот месяц</h2>
+    <h2>🎉 Прощения за {{ month_name }} {{ year }}</h2>
     <div class="exemptions-list">
         {% for f in active_forgiveness %}
         <div class="exemption-item forgiveness-item">
@@ -167,7 +178,7 @@
                 <span class="exemption-period">{{ f['start_date'] }} — {{ f['end_date'] }}</span>
                 <span class="exemption-reason">{{ f['reason'] }}</span>
             </div>
-            <a href="{{ url_for('ruk_delete_forgiveness', forgiveness_id=f['id']) }}"
+            <a href="{{ url_for('ruk.ruk_delete_forgiveness', forgiveness_id=f['id']) }}"
                class="btn-danger"
                onclick="return confirm('Удалить прощение?')">🗑</a>
         </div>
@@ -196,13 +207,13 @@
                 <span class="status-badge exempt">🌟 Вечное</span>
                 {% endif %}
 
-                <a href="{{ url_for('ruk_toggle_perm_exempt', user_id=s.user_id) }}"
+                <a href="{{ url_for('ruk.ruk_toggle_perm_exempt', user_id=s.user_id) }}"
                    class="btn-exempt-toggle"
                    onclick="return confirm('{{ 'Снять вечное освобождение' if s.perm_exempt else 'Выдать вечное освобождение' }} для {{ s.fio }}?')">
                     {{ '🌟 Снять вечное' if s.perm_exempt else '🌟 Вечное' }}
                 </a>
 
-                <a href="{{ url_for('ruk_delete_student', user_id=s.user_id) }}"
+                <a href="{{ url_for('ruk.ruk_delete_student', user_id=s.user_id) }}"
                    class="btn-danger btn-delete-student"
                    onclick="return confirm('Удалить студента {{ s.fio }}?\n\nАккаунт будет удалён полностью!')">
                     🗑 Удалить
@@ -249,7 +260,7 @@
                         <details class="shift-delete">
                             <summary title="Удалить запись">❌</summary>
                             <form method="POST"
-                                  action="{{ url_for('ruk_remove_shift', date_str=shift.date, slot=shift.place - 1) }}"
+                                  action="{{ url_for('ruk.ruk_remove_shift', date_str=shift.date, slot=shift.place - 1) }}"
                                   onsubmit="return confirm('Удалить запись {{ s.fio }} на {{ shift.date }}?')">
                                 <input type="text" name="reason" placeholder="Причина" required>
                                 <button type="submit">Удалить</button>

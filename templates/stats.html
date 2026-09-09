@@ -11,7 +11,7 @@
         {% endif %}
     </div>
 
-    <!-- Новая статистика по явке -->
+    <!-- Статистика по явке -->
     <div class="attendance-stats">
         <div class="attendance-card">
             <div class="attendance-number" style="color:#28a745">{{ present_count }}</div>
@@ -51,41 +51,41 @@
     <h3>📅 Мои дежурства ({{ shifts|length }})</h3>
     <div class="shifts-list">
         {% for shift in shifts %}
-<div class="shift-card {% if shift.is_past %}past{% endif %} shift-{{ shift.checkin_status }}">
-    <div>
-        <div class="shift-date">{{ shift.date_str }}</div>
-        <div class="shift-time">{{ shift.shift }}</div>
-        <div class="shift-place">🪑 Место {{ shift.place }}</div>
-    </div>
-    <div class="shift-right">
-        {% if shift.checkin_status == 'present' %}
-        <span class="shift-status present">✓ Пришёл в {{ shift.checkin_time }}</span>
-        {% elif shift.checkin_status == 'missed' %}
-        <span class="shift-status missed">❌ Не явился</span>
-        {% else %}
-        <span class="shift-status upcoming">⏳ Ожидается</span>
-        {% endif %}
+        <div class="shift-card {% if shift.is_past %}past{% endif %} shift-{{ shift.checkin_status }}">
+            <div>
+                <div class="shift-date">{{ shift.date_str }}</div>
+                <div class="shift-time">{{ shift.shift }}</div>
+                <div class="shift-place">🪑 Место {{ shift.place }}</div>
+            </div>
+            <div class="shift-right">
+                {% if shift.checkin_status == 'present' %}
+                <span class="shift-status present">✓ Пришёл в {{ shift.checkin_time }}</span>
+                {% elif shift.checkin_status == 'missed' %}
+                <span class="shift-status missed">❌ Не явился</span>
+                {% else %}
+                <span class="shift-status upcoming">⏳ Ожидается</span>
+                {% endif %}
 
-        {% if not shift.is_past %}
-        <details class="cancel-details">
-            <summary class="btn-cancel">❌ Отменить</summary>
-            <form method="POST" action="{{ url_for('unbook_from_stats', date_str=shift.date_str) }}"
-                  class="cancel-form"
-                  onsubmit="return confirm('Отменить дежурство {{ shift.date_str }}?')">
-                <input type="text" name="reason" placeholder="Причина отмены" required>
-                <button type="submit">Подтвердить</button>
-            </form>
-        </details>
-        {% endif %}
-    </div>
-</div>
-{% endfor %}
+                {% if not shift.is_past %}
+                <details class="cancel-details">
+                    <summary class="btn-cancel">❌ Отменить</summary>
+                    <form method="POST" action="{{ url_for('stats.unbook_from_stats', date_str=shift.date_str) }}"
+                          class="cancel-form"
+                          onsubmit="return confirm('Отменить дежурство {{ shift.date_str }}?')">
+                        <input type="text" name="reason" placeholder="Причина отмены" required>
+                        <button type="submit">Подтвердить</button>
+                    </form>
+                </details>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 {% else %}
 <div class="empty-state">
     <p>📭 У вас пока нет дежурств</p>
-    <a href="{{ url_for('calendar_view') }}" class="btn-primary"
+    <a href="{{ url_for('calendar.calendar_view') }}" class="btn-primary"
        style="display:inline-block; width:auto; padding:14px 30px;">
         Записаться на дежурство
     </a>
@@ -125,6 +125,7 @@
         {% endfor %}
     </ul>
 </div>
+{% endif %}
 
 {% if processed_requests %}
 <div class="section">
@@ -143,6 +144,5 @@
         {% endfor %}
     </ul>
 </div>
-{% endif %}
 {% endif %}
 {% endblock %}

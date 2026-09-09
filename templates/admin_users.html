@@ -12,10 +12,11 @@
             <div>
                 <strong>{{ u['fio'] }}</strong>
                 <span class="role-badge">{{ u['role'] }}</span>
+                <div class="pending-email">📧 {{ u['username'] }}</div>
             </div>
             <div class="pending-actions">
-                <a href="{{ url_for('approve_user', user_id=u['user_id']) }}" class="btn-unblock">✅ Принять</a>
-                <a href="{{ url_for('reject_user', user_id=u['user_id']) }}" class="btn-block">🚫 Отклонить</a>
+                <a href="{{ url_for('admin.approve_user', user_id=u['user_id']) }}" class="btn-unblock">✅ Принять</a>
+                <a href="{{ url_for('admin.reject_user', user_id=u['user_id']) }}" class="btn-block">🚫 Отклонить</a>
             </div>
         </div>
         {% endfor %}
@@ -51,7 +52,7 @@
 
                 <td>
                     {% if u['user_id'] != user['id'] %}
-                    <form method="POST" action="{{ url_for('change_user_role', user_id=u['user_id']) }}"
+                    <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u['user_id']) }}"
                           class="role-change-form"
                           onsubmit="return confirm('Изменить роль для {{ u.fio }}?')">
                         <select name="new_role" onchange="this.form.submit()">
@@ -86,14 +87,14 @@
                     {% if u['user_id'] != user['id'] %}
                     <details class="reset-password">
                         <summary>🔑 Сбросить пароль</summary>
-                        <form method="POST" action="{{ url_for('admin_reset_password', user_id=u['user_id']) }}"
+                        <form method="POST" action="{{ url_for('admin.admin_reset_password', user_id=u['user_id']) }}"
                               onsubmit="return confirm('Сбросить пароль для {{ u.fio }}?')">
                             <input type="password" name="new_password" placeholder="Новый пароль" required minlength="6">
                             <button type="submit">Сбросить</button>
                         </form>
                     </details>
 
-                    <a href="{{ url_for('delete_user', user_id=u['user_id']) }}"
+                    <a href="{{ url_for('admin.delete_user', user_id=u['user_id']) }}"
                        class="btn-danger"
                        onclick="return confirm('Удалить пользователя {{ u.fio }}?')">
                         🗑 Удалить
@@ -113,4 +114,5 @@
     <p class="muted">Нет подтверждённых пользователей.</p>
 </div>
 {% endif %}
+
 {% endblock %}

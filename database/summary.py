@@ -6,6 +6,20 @@ from config import PRACTICES, EXEMPT_MONTHS, MONTH_NAMES
 from .connection import MSK
 
 
+def _to_dict(cursor, row):
+    """Преобразует строку БД (tuple или Row) в обычный dict."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    if hasattr(row, "keys"):
+        return dict(row)
+    if hasattr(cursor, "description") and cursor.description:
+        columns = [col[0] for col in cursor.description]
+        return dict(zip(columns, row))
+    return dict(row)
+
+
 def _month_range(year, month):
     """Начало и конец месяца"""
     month_start = datetime(year, month, 1)
@@ -50,25 +64,25 @@ class SummaryMixin:
         # Собираем всех, кто может дежурить: студенты + руководители
         duty_people = []
         for u in users:
-            role = u["role"]
+            role = u.get("role", "")
             if role in PRACTICES or (role.startswith("Рук") and role[4:].strip() in PRACTICES):
                 practice = role if role in PRACTICES else role[4:].strip()
                 duty_people.append({
-                    "user_id": u["user_id"],
-                    "fio": u["fio"],
+                    "user_id": u.get("user_id"),
+                    "fio": u.get("fio"),
                     "role": role,
                     "practice": practice,
                     "is_ruk": role.startswith("Рук"),
-                    "perm_exempt": u["perm_exempt"]
+                    "perm_exempt": u.get("perm_exempt", 0)
                 })
 
         # Освобождения на месяц (legacy-формат из cancels)
         forgiven_by_fio = {}
         for row in cancels[1:]:
             if len(row) >= 5:
-                fio = row[0].strip()
-                target_date = row[3].strip()
-                reason = row[4].strip()
+                fio = str(row[0]).strip()
+                target_date = str(row[3]).strip()
+                reason = str(row[4]).strip()
                 if target_date.startswith("Освобождение"):
                     try:
                         m_v, y_v = map(int, target_date.replace("Освобождение ", "").split("."))
@@ -82,24 +96,28 @@ class SummaryMixin:
         for f in self.get_all_forgiveness():
             forgiveness_by_fio.setdefault(f["fio"], []).append(f)
 
-        # ✅ Множество чек-инов для быстрой проверки
+        # ✅ Множество чек-инов для быстрой проверки (корректная обработка tuple/dict из Turso)
         checkins_set = set()
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("SELECT fio, date_str, slot FROM checkins")
         for row in cursor.fetchall():
-            checkins_set.add((row["fio"], row["date_str"], row["slot"]))
+            d = _to_dict(cursor, row)
+            if isinstance(row, (tuple, list)):
+                checkins_set.add((row[0], row[1], row[2]))
+            elif d:
+                checkins_set.add((d.get("fio"), d.get("date_str"), d.get("slot")))
 
         # ✅ Записи расписания со статусом явки
         shifts_by_fio = {}
         for row in schedule[1:]:
             try:
-                d = datetime.strptime(row[0].strip(), "%d.%m.%Y")
+                date_str = str(row[0]).strip()
+                d = datetime.strptime(date_str, "%d.%m.%Y")
                 if d.year != cy:
                     continue
-                date_str = row[0].strip()
                 for i in range(1, min(len(row), 5)):
-                    fio = row[i].strip()
+                    fio = str(row[i]).strip()
                     if not fio:
                         continue
 
@@ -201,8 +219,8 @@ class SummaryMixin:
         user_stats = {}
 
         for u in users:
-            p, fio = u["role"], u["fio"]
-            is_perm = u["perm_exempt"]
+            p, fio = u.get("role"), u.get("fio")
+            is_perm = u.get("perm_exempt", 0)
             if p in PRACTICES:
                 fios_by_p[p].append(fio)
                 fios_by_p["Все"].append(fio)
@@ -213,20 +231,20 @@ class SummaryMixin:
 
         for r in schedule[1:]:
             try:
-                d = datetime.strptime(r[0].strip(), "%d.%m.%Y")
+                d = datetime.strptime(str(r[0]).strip(), "%d.%m.%Y")
                 for i in range(1, min(len(r), 5)):
-                    f = r[i].strip()
+                    f = str(r[i]).strip()
                     if f in user_stats:
                         if user_stats[f]['start'] is None or d < user_stats[f]['start']:
                             user_stats[f]['start'] = d
                         if d.year == cy:
-                            user_stats[f]['shifts'].setdefault(d.month, []).append(r[0].strip())
+                            user_stats[f]['shifts'].setdefault(d.month, []).append(str(r[0]).strip())
             except ValueError:
                 pass
 
         for r in cancels[1:]:
             if len(r) >= 5:
-                f, val, reas = r[0].strip(), r[3].strip(), r[4].strip()
+                f, val, reas = str(r[0]).strip(), str(r[3]).strip(), str(r[4]).strip()
                 if f in user_stats and val.startswith("Освобождение"):
                     try:
                         m_v, y_v = map(int, val.replace("Освобождение ", "").split("."))

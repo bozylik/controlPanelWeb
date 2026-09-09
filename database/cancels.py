@@ -2,6 +2,26 @@
 from datetime import datetime
 
 
+def _to_dict(cursor, row):
+    """Преобразует строку БД (tuple или Row) в обычный dict."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    if hasattr(row, "keys"):
+        return dict(row)
+    # Если вернулся обычный tuple/list (бывает в LibSQL)
+    if hasattr(cursor, "description") and cursor.description:
+        columns = [col[0] for col in cursor.description]
+        return dict(zip(columns, row))
+    return dict(row)
+
+
+def _to_dict_list(cursor, rows):
+    """Преобразует список строк БД в список словарей."""
+    return [_to_dict(cursor, row) for row in rows]
+
+
 class CancelsMixin:
     # ==================== ИСТОРИЯ ОТМЕН ====================
     def add_cancel(self, fio, practice, cancel_date, target_date, reason):
@@ -11,16 +31,19 @@ class CancelsMixin:
             "INSERT INTO cancels (fio, practice, cancel_date, target_date, reason) VALUES (?, ?, ?, ?, ?)",
             (fio, practice, cancel_date, target_date, reason)
         )
-        conn.commit()
+        if hasattr(conn, "commit"):
+            conn.commit()
 
     def get_all_cancels(self):
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM cancels ORDER BY id DESC")
         rows = cursor.fetchall()
+
         result = [["ФИО", "Практика", "Дата отмены", "Дата смены/Освобождение", "Причина"]]
         for row in rows:
-            result.append([row["fio"], row["practice"], row["cancel_date"], row["target_date"], row["reason"]])
+            d = _to_dict(cursor, row)
+            result.append([d["fio"], d["practice"], d["cancel_date"], d["target_date"], d["reason"]])
         return result
 
     # ==================== ЗАПРОСЫ НА ОТМЕНУ ====================
@@ -44,7 +67,8 @@ class CancelsMixin:
             (user_id, fio, practice, date_str, reason,
              datetime.now().strftime("%d.%m.%Y %H:%M"))
         )
-        conn.commit()
+        if hasattr(conn, "commit"):
+            conn.commit()
         return True, "Запрос отправлен руководителю"
 
     def get_user_cancel_requests(self, user_id):
@@ -55,7 +79,7 @@ class CancelsMixin:
             "SELECT * FROM cancel_requests WHERE user_id = ? ORDER BY id DESC",
             (user_id,)
         )
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def get_ruk_cancel_requests(self, practice):
         """Запросы студентов конкретной практики (для руководителя)"""
@@ -65,22 +89,26 @@ class CancelsMixin:
             "SELECT * FROM cancel_requests WHERE practice = ? AND status = 'pending' ORDER BY id DESC",
             (practice,)
         )
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def get_pending_cancel_requests(self):
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM cancel_requests WHERE status = 'pending' ORDER BY id DESC")
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def approve_cancel_request(self, request_id):
         """Одобрить запрос на отмену"""
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM cancel_requests WHERE id = ?", (request_id,))
-        req = cursor.fetchone()
+        raw_req = cursor.fetchone()
 
-        if not req or req["status"] != "pending":
+        if not raw_req:
+            return None
+
+        req = _to_dict(cursor, raw_req)
+        if req["status"] != "pending":
             return None
 
         # Удаляем запись из расписания
@@ -101,8 +129,9 @@ class CancelsMixin:
             "UPDATE cancel_requests SET status = 'approved' WHERE id = ?",
             (request_id,)
         )
-        conn.commit()
-        return dict(req)
+        if hasattr(conn, "commit"):
+            conn.commit()
+        return req
 
     def reject_cancel_request(self, request_id):
         """Отклонить запрос на отмену"""
@@ -112,7 +141,9 @@ class CancelsMixin:
             "UPDATE cancel_requests SET status = 'rejected' WHERE id = ? AND status = 'pending'",
             (request_id,)
         )
-        conn.commit()
+        if hasattr(conn, "commit"):
+            conn.commit()
+
         cursor.execute("SELECT * FROM cancel_requests WHERE id = ?", (request_id,))
         row = cursor.fetchone()
-        return dict(row) if row else None
+        return _to_dict(cursor, row)

@@ -2,6 +2,25 @@
 from datetime import datetime
 
 
+def _to_dict(cursor, row):
+    """Преобразует строку БД (tuple или Row) в обычный dict."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    if hasattr(row, "keys"):
+        return dict(row)
+    if hasattr(cursor, "description") and cursor.description:
+        columns = [col[0] for col in cursor.description]
+        return dict(zip(columns, row))
+    return dict(row)
+
+
+def _to_dict_list(cursor, rows):
+    """Преобразует список строк БД в список словарей."""
+    return [_to_dict(cursor, row) for row in rows]
+
+
 class ExemptionsMixin:
     # ==================== ОСВОБОЖДЕНИЯ ====================
     def add_exemption(self, user_id, fio, start_date, end_date, reason):
@@ -15,14 +34,15 @@ class ExemptionsMixin:
             """,
             (user_id, fio, start_date, end_date, reason)
         )
-        conn.commit()
+        if hasattr(conn, "commit"):
+            conn.commit()
 
     def get_active_exemptions(self):
         """Активные освобождения (сегодня внутри периода). Даты сравниваются в Python."""
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM exemptions ORDER BY id DESC")
-        rows = [dict(row) for row in cursor.fetchall()]
+        rows = _to_dict_list(cursor, cursor.fetchall())
 
         today = datetime.now().date()
         result = []
@@ -44,14 +64,15 @@ class ExemptionsMixin:
             "SELECT * FROM exemptions WHERE user_id = ? ORDER BY id DESC",
             (user_id,)
         )
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def delete_exemption(self, exemption_id):
         """Удаляет освобождение"""
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM exemptions WHERE id = ?", (exemption_id,))
-        conn.commit()
+        if hasattr(conn, "commit"):
+            conn.commit()
 
     # ==================== ПРОЩЕНИЯ ====================
     def add_forgiveness_period(self, user_id, fio, practice, start_date, end_date, reason):
@@ -64,14 +85,15 @@ class ExemptionsMixin:
                VALUES (?, ?, ?, ?, ?, ?)""",
             (user_id, fio, practice, start_date, end_date, reason)
         )
-        conn.commit()
+        if hasattr(conn, "commit"):
+            conn.commit()
 
     def get_all_forgiveness(self):
         """Все прощения без фильтра"""
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM forgiveness ORDER BY id DESC")
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def get_all_forgiveness_by_practice(self, practice):
         """Все прощения практики (включая прошедшие)"""
@@ -81,7 +103,7 @@ class ExemptionsMixin:
             "SELECT * FROM forgiveness WHERE practice = ? ORDER BY id DESC",
             (practice,)
         )
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def get_active_forgiveness(self):
         """Активные прощения (сегодня внутри периода). Даты сравниваются в Python."""
@@ -105,14 +127,15 @@ class ExemptionsMixin:
             "SELECT * FROM forgiveness WHERE fio = ? ORDER BY id DESC",
             (fio,)
         )
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def delete_forgiveness(self, forgiveness_id):
         """Удаляет прощение"""
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM forgiveness WHERE id = ?", (forgiveness_id,))
-        conn.commit()
+        if hasattr(conn, "commit"):
+            conn.commit()
 
     def is_date_forgiven(self, fio, date_str):
         """Проверяет, прощена ли конкретная дата для пользователя"""

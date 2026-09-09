@@ -5,19 +5,73 @@ from datetime import timedelta, timezone
 
 import config
 
-# Часовой пояс Москвы (МСК = UTC+3)
 MSK = timezone(timedelta(hours=3))
 
-# Определяем движок
 USE_TURSO = bool(config.TURSO_DATABASE_URL and config.TURSO_AUTH_TOKEN)
 
 if USE_TURSO:
     try:
-        import libsql_client
+        from libsql import connect as libsql_connect
     except ImportError:
         raise RuntimeError(
-            "Для работы с Turso установи пакет: pip install libsql-client"
+            "Для работы с Turso установи: pip install libsql"
         )
+
+
+class DictLikeRow(dict):
+    """Обертка для результата LibSQL, позволяющая обращаться и по ключу, и по индексу."""
+    def __init__(self, mapping, tuple_data):
+        super().__init__(mapping)
+        self._tuple = tuple_data
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return self._tuple[item]
+        return super().__getitem__(item)
+
+
+class LibSQLCursorWrapper:
+    """Обертка над курсором LibSQL для автоматического преобразования строк в словари."""
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+    def _wrap_row(self, row):
+        if row is None:
+            return None
+        if isinstance(row, dict):
+            return row
+        if hasattr(self._cursor, "description") and self._cursor.description:
+            cols = [col[0] for col in self._cursor.description]
+            mapping = dict(zip(cols, row))
+            return DictLikeRow(mapping, row)
+        return row
+
+    def fetchone(self):
+        row = self._cursor.fetchone()
+        return self._wrap_row(row)
+
+    def fetchall(self):
+        rows = self._cursor.fetchall()
+        return [self._wrap_row(r) for r in rows]
+
+
+class LibSQLConnWrapper:
+    """Обертка над подключением LibSQL для проброса обернутого курсора."""
+    def __init__(self, conn):
+        self._conn = conn
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def cursor(self):
+        return LibSQLCursorWrapper(self._conn.cursor())
+
+    def execute(self, *args, **kwargs):
+        cursor = self._conn.execute(*args, **kwargs)
+        return LibSQLCursorWrapper(cursor)
 
 
 class ConnectionMixin:
@@ -27,18 +81,18 @@ class ConnectionMixin:
     def _get_conn(self):
         if not hasattr(self.local, 'conn') or self.local.conn is None:
             if USE_TURSO:
-                # libsql_client создает синхронное HTTPS-подключение
-                self.local.conn = libsql_client.create_client_sync(
-                    url=config.TURSO_DATABASE_URL,
-                    auth_token=config.TURSO_AUTH_TOKEN
+                raw_conn = libsql_connect(
+                    config.TURSO_DATABASE_URL,
+                    auth_token=config.TURSO_AUTH_TOKEN,
                 )
+                self.local.conn = LibSQLConnWrapper(raw_conn)
             else:
                 self.local.conn = sqlite3.connect(config.DB_PATH)
                 self.local.conn.row_factory = sqlite3.Row
         return self.local.conn
 
     def init(self):
-        """Создаёт таблицы."""
+        """Создаёт таблицы. Для LibSQL — по одной с явным commit()."""
         conn = self._get_conn()
 
         tables = [
@@ -113,19 +167,19 @@ class ConnectionMixin:
 
         for sql in tables:
             try:
-                if USE_TURSO:
-                    conn.execute(sql)
-                else:
-                    cursor = conn.cursor()
-                    cursor.execute(sql)
+                conn.execute(sql)
+                if hasattr(conn, "commit"):
+                    conn.commit()
             except Exception as e:
-                print(f"⚠️ Таблица: {e}")
+                if "already exists" not in str(e).lower():
+                    print(f"⚠️ {e}")
 
-        if not USE_TURSO:
-            try:
-                conn.cursor().execute("ALTER TABLE users ADD COLUMN approval_status TEXT DEFAULT 'pending'")
-            except Exception:
-                pass
-            conn.commit()
+        # Миграция: approval_status для старых БД
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN approval_status TEXT DEFAULT 'pending'")
+            if hasattr(conn, "commit"):
+                conn.commit()
+        except Exception:
+            pass  # колонка уже есть или таблица только что создана с ней
 
         print(f"✅ БД готова (движок: {'Turso' if USE_TURSO else 'SQLite'})")

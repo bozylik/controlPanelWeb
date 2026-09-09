@@ -4,6 +4,25 @@ from datetime import datetime, time
 from .connection import MSK
 
 
+def _to_dict(cursor, row):
+    """Преобразует строку БД (tuple или Row) в обычный dict."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    if hasattr(row, "keys"):
+        return dict(row)
+    if hasattr(cursor, "description") and cursor.description:
+        columns = [col[0] for col in cursor.description]
+        return dict(zip(columns, row))
+    return dict(row)
+
+
+def _to_dict_list(cursor, rows):
+    """Преобразует список строк БД в список словарей."""
+    return [_to_dict(cursor, row) for row in rows]
+
+
 class CheckinsMixin:
     def checkin(self, user_id, fio, date_str, slot, checkin_time):
         """Отмечает приход на смену"""
@@ -24,7 +43,8 @@ class CheckinsMixin:
                VALUES (?, ?, ?, ?, ?, ?)""",
             (user_id, fio, date_str, slot, shift, checkin_time)
         )
-        conn.commit()
+        if hasattr(conn, "commit"):
+            conn.commit()
         return True, f"Приход отмечен в {checkin_time}"
 
     def get_user_checkins(self, user_id):
@@ -35,7 +55,7 @@ class CheckinsMixin:
             "SELECT * FROM checkins WHERE user_id = ? ORDER BY date_str DESC",
             (user_id,)
         )
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def get_checkin_for_slot(self, date_str, slot, fio):
         """Чек-ин для конкретного слота"""
@@ -46,7 +66,7 @@ class CheckinsMixin:
             (date_str, slot, fio)
         )
         row = cursor.fetchone()
-        return dict(row) if row else None
+        return _to_dict(cursor, row)
 
     def get_all_checkins_for_date(self, date_str):
         """Все чек-ины на конкретную дату"""
@@ -56,7 +76,7 @@ class CheckinsMixin:
             "SELECT * FROM checkins WHERE date_str = ?",
             (date_str,)
         )
-        return [dict(row) for row in cursor.fetchall()]
+        return _to_dict_list(cursor, cursor.fetchall())
 
     def get_shift_status(self, date_str, slot):
         """Возвращает статус смены"""
@@ -86,7 +106,6 @@ class CheckinsMixin:
         except ValueError:
             return "unknown"
 
-    # ✅ НОВОЕ: проверка, прошла ли смена
     def is_shift_over(self, date_str, slot):
         """Прошла ли смена целиком (включая окно чек-ина)"""
         try:
@@ -100,7 +119,6 @@ class CheckinsMixin:
         if shift_date > today:
             return False
 
-        # Сегодня: смена прошла, если окно чек-ина закрылось
         now_time = datetime.now(MSK).time()
         window_end = time(12, 0) if slot < 2 else time(16, 0)
         return now_time > window_end

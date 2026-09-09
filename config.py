@@ -1,22 +1,21 @@
-SECRET_KEY = "your-secret-key-change-me-very-long-random-string-1234567890"
-DB_PATH = "duty.db"
+import os
+from pathlib import Path
 
-PRACTICES = ["ГП", "АП", "СП", "ЖЗП"]
-EXEMPT_MONTHS = [1, 7, 8]
+BASE_DIR = Path(__file__).parent
 
-# Секретные коды для быстрого входа (для руководителей)
-ADMIN_CODES = ["АХУЙ", "АДМИН"]
-RUK_CODES = {
-    "ГПГП": "Рук ГП", "РУК ГП": "Рук ГП",
-    "АПАП": "Рук АП", "РУК АП": "Рук АП",
-    "СПСП": "Рук СП", "РУК СП": "Рук СП",
-    "ЖЗПЖЗП": "Рук ЖЗП", "РУК ЖЗП": "Рук ЖЗП",
-}
+SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+MIN_PASSWORD_LENGTH = 6
 
+# Если есть TURSO — используем его, иначе локальный файл
+TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL")
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN")
+
+# Локальный путь — только для разработки без Turso
+DB_PATH = str(BASE_DIR / "duty.db")
+
+PRACTICES = ["ГП", "АП", "СП"]  # ← подставь свои
+EXEMPT_MONTHS = [7, 8]
 MONTH_NAMES = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
                "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
-MONTH_NAMES_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня",
-                   "июля", "августа", "сентября", "октября", "ноября", "декабря"]
-
-# Минимальные требования к паролю
-MIN_PASSWORD_LENGTH = 6
+MONTH_NAMES_GEN = ["Января", "Февраля", "Марта", "Апреля", "Мая", "Июня",
+                   "Июля", "Августа", "Сентября", "Октября", "Ноября", "Декабря"]

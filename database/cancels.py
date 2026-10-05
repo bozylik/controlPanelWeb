@@ -102,14 +102,18 @@ class CancelsMixin:
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM cancel_requests WHERE id = ?", (request_id,))
-        raw_req = cursor.fetchone()
+        req = cursor.fetchone()
 
-        if not raw_req:
+        if not req or req["status"] != "pending":
             return None
 
-        req = _to_dict(cursor, raw_req)
-        if req["status"] != "pending":
-            return None
+        # Определяем номер места для уведомления
+        day_data = self.get_day_data(req["date_str"])
+        place_num = None
+        for i, slot in enumerate(day_data):
+            if slot and slot.strip() == req["fio"]:
+                place_num = i + 1
+                break
 
         # Удаляем запись из расписания
         self._clear_slot_by_fio(req["date_str"], req["fio"])
@@ -129,9 +133,12 @@ class CancelsMixin:
             "UPDATE cancel_requests SET status = 'approved' WHERE id = ?",
             (request_id,)
         )
-        if hasattr(conn, "commit"):
-            conn.commit()
-        return req
+        conn.commit()
+
+        result = dict(req)
+        # ✅ Добавляем номер места в результат для шаблона
+        result["place_num"] = place_num
+        return result
 
     def reject_cancel_request(self, request_id):
         """Отклонить запрос на отмену"""

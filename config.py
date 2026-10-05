@@ -14,7 +14,7 @@ TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE
 
 DB_PATH = str(BASE_DIR / "duty.db")
 
-PRACTICES = ["ГП", "АП", "СП"]
+PRACTICES = ["ГП", "АП", "СП", "ЖЗП"]
 EXEMPT_MONTHS = [7, 8]
 MONTH_NAMES = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
                "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]

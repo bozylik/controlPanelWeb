@@ -68,7 +68,7 @@
         <div class="pending-item">
             <div class="pending-info">
                 <div><strong>{{ r['fio'] }}</strong></div>
-                <div class="pending-date">📅 {{ r['date_str'] }}</div>
+                <div class="pending-date">📅 {{ r['date_str'] }}{% if r.get('place_num') %}, место {{ r['place_num'] }}{% endif %}</div>
                 <div class="pending-reason">💬 {{ r['reason'] }}</div>
                 <div class="pending-time muted">{{ r['created_at'] }}</div>
             </div>

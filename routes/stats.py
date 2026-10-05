@@ -177,13 +177,18 @@ def unbook_from_stats(date_str):
     if not user:
         return redirect(url_for("auth.login"))
 
+    # ✅ Проверка: нельзя отменить прошедшее дежурство
     try:
         day_date = datetime.strptime(date_str, "%d.%m.%Y").date()
         today = datetime.now(MSK).date()
-        if day_date < today:
+
+        # Если дата меньше сегодня ИЛИ (сегодня И окно чек-ина уже закрылось)
+        is_shift_over = db.is_shift_over(date_str, 0) if day_date == today else (day_date < today)
+
+        if is_shift_over:
             flash("Нельзя отменить прошедшее дежурство", "error")
             return redirect(url_for("stats.stats"))
-    except:
+    except ValueError:
         flash("Некорректная дата", "error")
         return redirect(url_for("stats.stats"))
 
@@ -192,6 +197,7 @@ def unbook_from_stats(date_str):
         flash("Укажите причину отмены", "error")
         return redirect(url_for("stats.stats"))
 
+    # Админы отменяют сразу без согласования
     if is_admin(user["role"]):
         day_data = db.get_day_data(date_str)
         for i, slot in enumerate(day_data):
@@ -205,7 +211,14 @@ def unbook_from_stats(date_str):
         flash(f"Дежурство {date_str} отменено", "success")
         return redirect(url_for("stats.stats"))
 
+    # Студенты создают запрос на согласование
     practice = db.get_user_practice(user["id"])
+
+    # ✅ Дополнительная проверка перед созданием запроса
+    if db.is_shift_over(date_str, 0):
+        flash("Нельзя создать запрос на отмену прошедшего дежурства", "error")
+        return redirect(url_for("stats.stats"))
+
     success, msg = db.create_cancel_request(
         user["id"], user["fio"], practice, date_str, reason
     )
